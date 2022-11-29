@@ -1,6 +1,6 @@
 import yaml
-import man_label as ml
-import label_tasks as lt
+from labeling import man_label as ml
+from labeling import label_tasks as lt
 
 def main():
     with open("config.yaml", "r") as f:

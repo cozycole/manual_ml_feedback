@@ -1,8 +1,8 @@
 import os
 import shutil
-from man_label import ManualClassifier
-from man_patch_label import PatchManualClassifier
-from instruction_strings import instruct_dict
+from labeling.man_label import ManualClassifier
+from labeling.man_patch_label import PatchManualClassifier
+from labeling.instruction_strings import instruct_dict
 
 def start_classification_tasks(shot_dir, db_str=None, false_neg=True):
     # Shot dir is the path to directory containing all image and patch directories
@@ -69,7 +69,18 @@ def start_classification_tasks(shot_dir, db_str=None, false_neg=True):
                 task_label=patch_instructions % shot_path
             ).start_classifier()
     
-    # we finally go through all distress and slight distress with patch distress
+        # we finally go through all distress and slight distress with patch distress
+        # we don't exclude any for the time being (fine having duplicate distress patches for training)
+        patch_instructions = instruct_dict["new_distress_patch_instruct"] + img_src_template
+        for label in ["distress", "slight_distress"]:
+            shot_path = os.path.join(tmp_img_path, "full_images", label)
+            PatchManualClassifier(
+                shot_dir=shot_path,
+                class_dir=os.path.join(tmp_img_path, f"{label}_patches"),
+                patch_width=200,
+                patch_height=200,
+                task_label=patch_instructions % shot_path
+            ).start_classifier()
             
 def move_incorrect_patches(shot_dir, tmp_img_path):
     # Now move all distressed patches into no distress if they are found

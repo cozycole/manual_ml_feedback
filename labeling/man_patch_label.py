@@ -5,7 +5,7 @@ Only distressed ones should be marked (anything else will be trashed)
 import os
 from PIL import Image, ImageTk
 import tkinter as tk
-import man_label as ml
+import labeling.man_label as ml
 
 class PatchManualClassifier(ml.ManualClassifier):
 
@@ -19,12 +19,10 @@ class PatchManualClassifier(ml.ManualClassifier):
 
     def crop_new_patches(self, img):
         width , height = img.size
-        print(img.size)
         width = min(1000, width)
         height = min(800, height)
         for i in range(0, width, self.patch_width):
             for j in range(0, height, int(self.patch_height/2)):
-                print(f"({i},{j}),({i + self.patch_width}, {j+self.patch_height})")
                 cropped_img = img.crop((i,j, i + self.patch_width, j+self.patch_height))
                 if j+self.patch_height <= height and i+ self.patch_width <= width:
                     self.curr_patch_list.append(cropped_img)
@@ -62,8 +60,6 @@ class PatchManualClassifier(ml.ManualClassifier):
         if not len(self.curr_patch_list):
             try:
                 self.patch_count = 0
-                # removes curr_img from list of image strs
-                print(f"removing {self.curr_img} from sqlite dict")
                 self.curr_img = self.images.pop()
                 self.curr_img_path = os.path.join(self.shot_dir, self.curr_img)
                 self.curr_img_obj = Image.open(self.curr_img_path)
