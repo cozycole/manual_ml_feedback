@@ -1,4 +1,5 @@
 import os
+import shutil
 from PIL import Image, ImageTk
 import tkinter as tk
 import psycopg2 as pg
@@ -113,16 +114,33 @@ def start_classification_tasks(shot_dir):
     # Classify full images from distress/no-distress
     img_src_template = "(Drawing images from %s)\n"
     full_img_instructions = inst_str.full_img_instruct + img_src_template 
-    os.path.join(os.getcwd(), "temp_img_store", "full_images")
+    tmp_img_path = os.path.join(os.getcwd(), "temp_img_store")
     # within auto classify images, full imgs must 
     # be in either distress or no_distress directory
     for label in ["distress", "no_distress"]:
         shot_path = os.path.join(shot_dir, label)
         ManualClassifier(
             shot_path,
-            os.path.join(os.getcwd(), "temp_img_store", "full_images"),
+            os.path.join(tmp_img_path, "full_images"),
             task_label=full_img_instructions % shot_path
         ).start_classifier()
 
     # Now move all distressed patches into no distress if they are found
-    # in a full img marked no distress
+    # in a full img marked no distress (i.e. they are erroneously marked distressed)
+    for label in ["board", "tarp", "distress"]:
+        label_dir_path = os.path.join(shot_dir, f"{label}_patches")
+        no_distress_imgs = os.listdir(os.path.join(tmp_img_path, "full_images", "no_distress"))
+        no_distress_imgs = [img.replace("_0.jpg","") for img in no_distress_imgs]
+        err_counter = 0
+        for patch_name in os.listdir(label_dir_path):
+            # full img is of form [0-9]+_[a-zA-Z0-9-_]{22}_0.jpg
+            # patches of form [0-9]+_[a-zA-Z0-9-_]{22}_0_patch[0-9].jpg
+            patch_root = patch_name.split("_",1)
+            patch_root = f"{patch_root[0]}_{patch_root[1][:22]}"
+            if patch_root in no_distress_imgs:
+                err_counter += 1
+                patch_path = os.path.join(label_dir_path, patch_name)
+                dest_dir = os.path.join(tmp_img_path, f"{label}_patches", "no_distress")
+                shutil.move(patch_path, dest_dir)
+            print(f"Moved {err_counter} {label} patches to no distress")
+            
