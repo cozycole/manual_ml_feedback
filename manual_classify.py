@@ -3,7 +3,7 @@ import shutil
 from PIL import Image, ImageTk
 import tkinter as tk
 import psycopg2 as pg
-import instruction_strings as inst_str
+from instruction_strings import instruct_dict
 
 class ManualClassifier:
     def __init__(self, shot_dir, class_dir, db_str=None, task_label=None):
@@ -12,9 +12,7 @@ class ManualClassifier:
         self.task_label = task_label
         self.db_str = db_str
         self.images = [f for f in os.listdir(self.shot_dir) if (f.endswith(".jpg") or f.endswith(".png"))]
-        if not self.images: raise Exception("No files found in shot_dir")
         self.img_count = len(self.images)
-        print(self.images)
         self.images.sort()
         self.window = tk.Tk()
         self.curr_img = None
@@ -43,17 +41,20 @@ class ManualClassifier:
             self.curr_img = self.images.pop()
             if self.curr_img is None:
                 raise IndexError
-        except IndexError:
-            pass
+        except Exception:
+            print(f"No images to show in {self.shot_dir}")
+            self.window.destroy()
+            return
         
         curr_img_path = os.path.join(self.shot_dir, self.curr_img)
+        print(curr_img_path)
         img = Image.open(curr_img_path).convert("RGB")
         dimensions = (800, 800) if img.size[0] == img.size[1] else (1000,800)
         self.curr_img_obj = ImageTk.PhotoImage(img.resize(dimensions))
         self.label = tk.Label(self.window, image=self.curr_img_obj)
         self.label.pack()
-        task_label = tk.Label(self.window, text=self.task_label)
-        task_label.pack(side=tk.BOTTOM)
+        self.tk_task_label = tk.Label(self.window, text=self.task_label)
+        self.tk_task_label.pack(side=tk.BOTTOM)
         self.window.mainloop()
             
     def file_action_on_event(self, event):
@@ -110,11 +111,12 @@ class ManualClassifier:
             if not os.path.exists(dir):
                 os.makedirs(dir)
 
-def start_classification_tasks(shot_dir):
+def start_classification_tasks(shot_dir, db_str=None):
     # Classify full images from distress/no-distress
     img_src_template = "(Drawing images from %s)\n"
-    full_img_instructions = inst_str.full_img_instruct + img_src_template 
+    full_img_instructions = instruct_dict["full_img_instruct"] + img_src_template 
     tmp_img_path = os.path.join(os.getcwd(), "temp_img_store")
+    
     # within auto classify images, full imgs must 
     # be in either distress or no_distress directory
     for label in ["distress", "no_distress"]:
@@ -122,15 +124,32 @@ def start_classification_tasks(shot_dir):
         ManualClassifier(
             shot_path,
             os.path.join(tmp_img_path, "full_images"),
+            db_str=db_str,
             task_label=full_img_instructions % shot_path
         ).start_classifier()
+    
+    move_incorrect_patches(shot_dir, tmp_img_path)
 
+    # Now individually validate each patch
+    for label in ["board", "tarp", "distress"]:
+        shot_path = os.path.join(shot_dir, f"{label}_patches")
+        patch_instructions = instruct_dict[f"{label}_patch_instruct"] + img_src_template
+        ManualClassifier(
+            shot_path,
+            os.path.join(tmp_img_path, f"{label}_patches"),
+            task_label=patch_instructions % shot_path
+        ).start_classifier()
+    
+    # Now go through each distress image that does not have an patches of each
+    # included in it
+
+def move_incorrect_patches(shot_dir, tmp_img_path):
     # Now move all distressed patches into no distress if they are found
     # in a full img marked no distress (i.e. they are erroneously marked distressed)
     for label in ["board", "tarp", "distress"]:
         label_dir_path = os.path.join(shot_dir, f"{label}_patches")
         no_distress_imgs = os.listdir(os.path.join(tmp_img_path, "full_images", "no_distress"))
-        no_distress_imgs = [img.replace("_0.jpg","") for img in no_distress_imgs]
+        no_distress_imgs = [img.replace("_0.jpg","").replace(".jpg","") for img in no_distress_imgs]
         err_counter = 0
         for patch_name in os.listdir(label_dir_path):
             # full img is of form [0-9]+_[a-zA-Z0-9-_]{22}_0.jpg
@@ -142,5 +161,5 @@ def start_classification_tasks(shot_dir):
                 patch_path = os.path.join(label_dir_path, patch_name)
                 dest_dir = os.path.join(tmp_img_path, f"{label}_patches", "no_distress")
                 shutil.move(patch_path, dest_dir)
-            print(f"Moved {err_counter} {label} patches to no distress")
+        print(f"Moved {err_counter} {label} patches to no distress")
             
