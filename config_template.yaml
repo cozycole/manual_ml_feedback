@@ -1,0 +1,29 @@
+##### ML Paramaters #####
+train_ml: false
+auto_classify_images_directory: /path/to/screenshot_directories
+##### Storage Paramaters #####
+db_str: postgresql://user:password@localhost:5432/db_name
+# must have directories: unknown, distress, slight_distress, and no_distress
+full_img_store_path: /path/to/full_image_store
+board: {
+  # can store in two separate locations
+  store1_path: /path/to/directory,
+  store2_path: /path/to/directory,
+  # these paths must have directories labeled as board and no_board
+  distress: board,
+  no_distress: no_board
+}
+distress: {
+  # can store in two separate locations
+  store1_path: /path/to/directory,
+  store2_path: /path/to/directory,
+  distress: distress,
+  no_distress: no_distress
+}
+tarp: {
+  store1_path: /path/to/directory,
+  store2_path: /path/to/directory,
+  distress: a_tarp,
+  no_distress: no_tarp
+}
+
