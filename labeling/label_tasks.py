@@ -49,13 +49,15 @@ def start_classification_tasks(shot_dir, db_str=None, false_neg=True):
         for label in ["board", "tarp"]:
             # needed for excluding an images where there are patches already found 
             print(f"Task: Finding false negative {label} patches")
-            label_dir_path = os.path.join(shot_dir, f"{label}_patches")
+            label_dir_path = os.path.join(tmp_img_path, f"{label}_patches", "distress")
             distress_imgs = os.listdir(os.path.join(tmp_img_path, "full_images", "distress"))
             distress_img_roots = [img.replace("_0.jpg","").replace(".jpg","") for img in distress_imgs]
+            print(distress_img_roots)
             no_check_imgs = set()
             for patch_name in os.listdir(label_dir_path):
                 patch_root = patch_name.split("_",1)
                 patch_root = f"{patch_root[0]}_{patch_root[1][:22]}"
+                print(patch_root)
                 # distress images already containing patches for the given class
                 if patch_root in distress_img_roots:
                     no_check_imgs.add(patch_root)
