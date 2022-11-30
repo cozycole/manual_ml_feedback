@@ -1,7 +1,6 @@
 import os
 from PIL import Image, ImageTk
 import tkinter as tk
-import psycopg2 as pg
 
 class ManualClassifier:
     def __init__(self, shot_dir, class_dir, images=None, db_str=None, task_label=None):
@@ -18,6 +17,7 @@ class ManualClassifier:
             self.img_count = len(self.images)
         self.images.sort()
         self.window = tk.Tk()
+
         self.curr_img = None
         self.label = None
         self.curr_img_obj = None
@@ -84,35 +84,8 @@ class ManualClassifier:
         except IndexError:
             print("No more screenshots! Stopping classifier loop")
             self.window.destroy()
-            if self.db_str:
-                print("Updating shot classes in db")
-                self.update_db()
         
-    def update_db(self):
-        print("updating db")
-        conn = pg.connect(self.db_str)
-        curs = conn.cursor()
-        for dir in os.listdir(self.class_dir):
-            print(dir)
-            if dir[0] != '.':
-                dir_path = os.path.join(self.class_dir, dir)
-                print(dir_path)
-                for shot in os.listdir(dir_path):
-                    self.update_db_shot(curs, dir, shot)
-                conn.commit()
-
-    def update_db_shot(self, curs, dir, shot: str):
-        query = f"""
-        UPDATE screenshots
-        SET distress_class='{dir}'
-        WHERE file_str='{shot.replace(".jpg", "")}'
-        """
-        curs.execute(query)
-
     def check_class_dir(self):
         for dir in self.class_dict.values():
             if not os.path.exists(dir):
                 os.makedirs(dir)
-
-
-            

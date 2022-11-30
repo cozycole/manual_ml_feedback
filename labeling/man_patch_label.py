@@ -32,8 +32,9 @@ class PatchManualClassifier(ml.ManualClassifier):
             self.curr_img = self.images.pop()
             if self.curr_img is None:
                 raise IndexError
-        except IndexError:
-            print("No files to show!")
+        except Exception:
+            print(f"No images to show in {self.shot_dir}")
+            self.window.destroy()
             return
 
         self.curr_img_path = os.path.join(self.shot_dir, self.curr_img)
@@ -42,7 +43,7 @@ class PatchManualClassifier(ml.ManualClassifier):
         # Note: self.curr_patch_list is a list of PIL Images
         self.curr_patch = self.curr_patch_list.pop()
         dimensions = (800, 800) if self.patch_height == self.patch_width else (1000,800)
-        self.curr_patch_obj = ImageTk.PhotoImage(self.curr_patch.resize(dimensions))
+        self.curr_patch_obj = ImageTk.PhotoImage(self.curr_patch.resize(dimensions), master=self.window)
         self.label = tk.Label(self.window, image=self.curr_patch_obj)
         self.label.pack()
         self.tk_task_label = tk.Label(self.window, text=self.task_label)
@@ -67,8 +68,8 @@ class PatchManualClassifier(ml.ManualClassifier):
             except IndexError:
                 print("No more screenshots! Stopping classifier loop")
                 self.window.destroy()
+                self.window = None
                 return
-        
         self.curr_patch = self.curr_patch_list.pop()
         dimensions = (800, 800) if self.patch_height == self.patch_width else (1000,800)
         self.curr_patch_obj = ImageTk.PhotoImage(self.curr_patch.resize(dimensions))

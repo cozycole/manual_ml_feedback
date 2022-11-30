@@ -4,31 +4,34 @@ from labeling.man_label import ManualClassifier
 from labeling.man_patch_label import PatchManualClassifier
 from labeling.instruction_strings import instruct_dict
 
+
 def start_classification_tasks(shot_dir, db_str=None, false_neg=True):
     # Shot dir is the path to directory containing all image and patch directories
-
     # Classify full images from distress/no-distress
     img_src_template = "(Drawing images from %s)\n"
     full_img_instructions = instruct_dict["full_img_instruct"] + img_src_template 
-    tmp_img_path = os.path.join(os.getcwd(), "temp_img_store")
     
+    tmp_img_path = os.path.join(os.getcwd(), "temp_img_store")
+    create_class_subdirs(tmp_img_path)
+
     # within auto classify images, full imgs must 
     # be in either distress or no_distress directory
     for label in ["distress", "no_distress"]:
         shot_path = os.path.join(shot_dir, label)
+        print(f"Task: Labeling full {label} images")
         ManualClassifier(
             shot_path,
             os.path.join(tmp_img_path, "full_images"),
             db_str=db_str,
             task_label=full_img_instructions % shot_path
         ).start_classifier()
-    
     move_incorrect_patches(shot_dir, tmp_img_path)
 
     # Now individually validate each patch
     for label in ["board", "tarp", "distress"]:
         shot_path = os.path.join(shot_dir, f"{label}_patches")
         patch_instructions = instruct_dict[f"{label}_patch_instruct"] + img_src_template
+        print(f"Task: Labeling pre-classified {label} patches")
         ManualClassifier(
             shot_path,
             os.path.join(tmp_img_path, f"{label}_patches"),
@@ -45,6 +48,7 @@ def start_classification_tasks(shot_dir, db_str=None, false_neg=True):
         shot_path = os.path.join(tmp_img_path, "full_images", "distress")
         for label in ["board", "tarp"]:
             # needed for excluding an images where there are patches already found 
+            print(f"Task: Finding false negative {label} patches")
             label_dir_path = os.path.join(shot_dir, f"{label}_patches")
             distress_imgs = os.listdir(os.path.join(tmp_img_path, "full_images", "distress"))
             distress_img_roots = [img.replace("_0.jpg","").replace(".jpg","") for img in distress_imgs]
@@ -74,9 +78,10 @@ def start_classification_tasks(shot_dir, db_str=None, false_neg=True):
         patch_instructions = instruct_dict["new_distress_patch_instruct"] + img_src_template
         for label in ["distress", "slight_distress"]:
             shot_path = os.path.join(tmp_img_path, "full_images", label)
+            print(f"Task: Finding false negative distress patches in {label} images")
             PatchManualClassifier(
                 shot_dir=shot_path,
-                class_dir=os.path.join(tmp_img_path, f"{label}_patches"),
+                class_dir=os.path.join(tmp_img_path, "distress_patches"),
                 patch_width=200,
                 patch_height=200,
                 task_label=patch_instructions % shot_path
@@ -101,3 +106,12 @@ def move_incorrect_patches(shot_dir, tmp_img_path):
                 dest_dir = os.path.join(tmp_img_path, f"{label}_patches", "no_distress")
                 shutil.move(patch_path, dest_dir)
         print(f"Moved {err_counter} {label} patches to no distress")
+
+def create_class_subdirs(src):
+    class_dirs = ["distress", "slight_distress", "no_distress", "unknown", "trash"]
+    category_dirs = ["board_patches", "tarp_patches", "distress_patches", "full_images"]
+    for cat in category_dirs:
+        for cls in class_dirs:
+            dir_name = os.path.join(src, cat, cls)
+            if not os.path.exists(dir_name):
+                os.makedirs(dir_name)
