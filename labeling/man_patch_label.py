@@ -46,6 +46,12 @@ class PatchManualClassifier(ml.ManualClassifier):
         self.curr_patch_obj = ImageTk.PhotoImage(self.curr_patch.resize(dimensions), master=self.window)
         self.label = tk.Label(self.window, image=self.curr_patch_obj)
         self.label.pack()
+        self.counter_label = tk.Label(self.window, textvariable=self.counter_text)
+        self.counter_text.set(f"""
+        COUNTER
+        {self.image_count}/{self.total_imgs}
+        """)
+        self.counter_label.pack(side=tk.BOTTOM)
         self.tk_task_label = tk.Label(self.window, text=self.task_label)
         self.tk_task_label.pack(side=tk.BOTTOM)
         self.window.mainloop()
@@ -65,6 +71,11 @@ class PatchManualClassifier(ml.ManualClassifier):
                 self.curr_img_path = os.path.join(self.shot_dir, self.curr_img)
                 self.curr_img_obj = Image.open(self.curr_img_path)
                 self.crop_new_patches(self.curr_img_obj)
+                self.image_count += 1
+                self.counter_text.set(f"""
+                    COUNTER
+                    {self.image_count}/{self.total_imgs}
+                    """)
             except IndexError:
                 print("No more screenshots! Stopping classifier loop")
                 self.window.destroy()

@@ -14,9 +14,11 @@ class ManualClassifier:
         else:
             self.images = [f for f in os.listdir(self.shot_dir) if (f.endswith(".jpg") or f.endswith(".png"))]
         
-            self.img_count = len(self.images)
+        self.total_imgs = len(self.images)
         self.images.sort()
         self.window = tk.Tk()
+        self.image_count = 1
+        self.counter_text = tk.StringVar()
 
         self.curr_img = None
         self.label = None
@@ -56,6 +58,12 @@ class ManualClassifier:
         self.curr_img_obj = ImageTk.PhotoImage(img.resize(dimensions))
         self.label = tk.Label(self.window, image=self.curr_img_obj)
         self.label.pack()
+        self.counter_label = tk.Label(self.window, textvariable=self.counter_text)
+        self.counter_text.set(f"""
+        COUNTER
+        {self.image_count}/{self.total_imgs}
+        """)
+        self.counter_label.pack(side=tk.BOTTOM)
         self.tk_task_label = tk.Label(self.window, text=self.task_label)
         self.tk_task_label.pack(side=tk.BOTTOM)
         self.window.mainloop()
@@ -74,7 +82,12 @@ class ManualClassifier:
             img = Image.open(new_shot_img_path).convert("RGB")
             dimensions = (800, 800) if img.size[0] == img.size[1] else (1000,800)
             self.curr_img_obj = ImageTk.PhotoImage(img.resize(dimensions))
-            self.label.configure(image=self.curr_img_obj)
+            self.label.configure(image=self.curr_img_obj) 
+            self.image_count += 1
+            self.counter_text.set(f"""
+                COUNTER
+                {self.image_count}/{self.total_imgs}
+                """)
 
             # don't entirely understand why, but you need
             # to create a reference to the curr_img_obj
